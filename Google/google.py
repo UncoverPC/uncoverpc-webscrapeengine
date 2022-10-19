@@ -8,6 +8,10 @@ PAK = "People also ask"
 HA = "Highlighted Answer"
 A = "General Answer"
 
+item = "iphone 12"
+goal = ["battery"] # there may be multiple items missing per product
+search_term = f"how long does the {item} battery last?"
+
 # Getting People also ask
 
 
@@ -66,10 +70,10 @@ def getData(searchTerm):
             if type(highlightAnswer) == list and len(highlightAnswer) > 0:
                 info[HA] = highlightAnswer[0]
 
-        print(info)
+        return info
     except TypeError as e:
         print("An unexpected error has occured while getting data")
         traceback.print_exc()
 
 
-getData("can i breathe in space")
+output = getData(search_term)
