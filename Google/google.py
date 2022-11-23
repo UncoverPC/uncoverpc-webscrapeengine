@@ -12,8 +12,6 @@ def main(item, goal):
     search_term = f"what is the {goal} of the {item}?"
 
     # Getting People also ask
-
-
     def findPAK(dom):
         y = html.fromstring(etree.tostring(
             dom, method='html', with_tail=False)).xpath('///span/text()')
@@ -31,8 +29,6 @@ def main(item, goal):
             '//*[@id="rso"]/div[1]/div/block-component/div/div[1]/div/div/div/div/div[1]/div/div/div/div/div[1]/div/span/span')
 
     # Getting Specific Answer Key
-
-
     def findKeyAnswer(dom):
         return dom.xpath(
             '//*[@id="rso"]/div[1]/div/block-component/div/div[1]/div/div/div/div/div[1]/div/div/div/div/div[1]/div/span/span/b/text()')
@@ -68,7 +64,6 @@ def main(item, goal):
                 highlightAnswer = findKeyAnswer(dom)
                 if type(highlightAnswer) == list and len(highlightAnswer) > 0:
                     info[HA] = highlightAnswer[0]
-
             return info
         except TypeError as e:
             print("An unexpected error has occured while getting data")

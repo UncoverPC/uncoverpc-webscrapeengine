@@ -15,11 +15,25 @@ db = client['uncoverpc']
 laptopCollection = db['laptops']
 userCollection = db['users']
 quizCollection = db['quizzes']
+quiz = db['quiz']
+
+# Test Quiz
+async def getQuiz():
+	out = []
+	collection = quiz.find()[0]['questions']
+	for item in collection:
+		out.append(item['question'])
+	return out
+
+
+#for item in test:
+ #   print(item, end = "\n")
 
 # get all data from quizzes collection
 allQuizzes = []
 for quiz in quizCollection.find():
 	allQuizzes.append(quiz)
+print(allQuizzes)
 
 # post new products
 

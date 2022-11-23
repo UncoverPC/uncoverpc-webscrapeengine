@@ -1,4 +1,6 @@
 from transformers import pipeline
+from sentence_transformers import SentenceTransformer
+import numpy as np
 import traceback
 import os, sys
 sys.path.append(os.path.join(os.path.dirname(__file__), "Misc"))
@@ -30,7 +32,7 @@ def automateAnswer (item, request):
     #     return answer
 
 
-def tempAdd():
+def extraSentences(item,goal, package):
     manual_input = {}
 
     def cosine_similarity(sentence_embeddings, ind_a, ind_b):
@@ -38,41 +40,31 @@ def tempAdd():
         return np.dot(s[ind_a], s[ind_b]) / (np.linalg.norm(s[ind_a]) * np.linalg.norm(s[ind_b]))
 
 
-    def pak_sentence():
+    def pak_sentence(item,goal, package):
 
         model = SentenceTransformer('bert-base-nli-mean-tokens')
-        desired_sentence = google.search_term
+        desired_sentence = f"what is the {goal} of the {item}?"
 
         sentences = [desired_sentence]
+        
+        sentences += package
 
-        sentences += google.output[google.PAK]
         sentence_embeddings = model.encode(sentences)
 
         out = []
         for i in range(1,len(sentences)):
             out.append(cosine_similarity(sentence_embeddings, 0, i))
         return sentences, out
-    
-    def no_sentence():
-        for item in google.goal:
-            manual_input[item] = input(f"Please enter the updated value for {item}: ")
 
-        print(manual_input)
+    sentences, out = pak_sentence(item,goal, package)
 
-    if (google.output[google.HA] == '' and google.output[google.A] == ''):
-        #try:
-        sentences, out = pak_sentence()
-
-        print(sentences[1:len(sentences)], end = "\n")
-        print(out)
-        if max(out) >  1: #some value that is low
-            print(f"""The closest People Also Ask question is: {sentences[out.index(max(out))+1]} \nThere is a similarity of {max(out)}""")
+    # print(sentences[1:len(sentences)], end = "\n")
+    # print(out)
+    try:
+        if max(out) >  1: #some value that is low (0.5)
+            return sentences[out.index(max(out))+1]
+            # print(f"""The closest People Also Ask question is: {sentences[out.index(max(out))+1]} \nThere is a similarity of {max(out)}""")
         else: 
-            print("Did not find optimal sentence.")
-            no_sentence()
-        # except:
-        #     print("Error has occured") 
-
-    else:
-        no_sentence()
-    
+            return 0
+    except:
+        return 0
