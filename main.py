@@ -26,6 +26,8 @@ CONNECTION_STRING = f'mongodb+srv://{MONGO_USER}:{MONGO_PASS}@cluster0.fgvaysh.m
 client = MongoClient(CONNECTION_STRING)
 db = client['uncoverpc']
 quiz = db['quiz']
+laptopCollection = db['laptops']
+incLaptopsCollection = db['inc-laptops']
 
 qa_model = pipeline("question-answering")
 
@@ -50,8 +52,8 @@ for a in soup.find_all('a', {"class": "a-link-normal s-no-outline"}):
 fullproducts = {}
 missingproducts = {}
 # AMAZON
-for i in range(2):
-    pageURL = f"https://www.amazon.ca{links[i]}"
+for iterator in range(2):
+    pageURL = f"https://www.amazon.ca{links[iterator]}"
     driver.get(pageURL)
     html = driver.page_source
     soup = BeautifulSoup(html, "html.parser")
@@ -97,7 +99,9 @@ for i in range(2):
             question = utils.extraSentences(output["Name"], item, temp['People also ask'])
             if question == 0:
                 # There is no good "people also ask"
-                if i < 1:
+                print(iterator)
+                if iterator >2:
+                    print("\n\n\n\n\n")
                     item = item.replace("?", "")
                     answer = input(f" {(item)} for the {output['Name']}: ")
                     output[item] = answer
@@ -110,9 +114,9 @@ for i in range(2):
     for j in range(len(questions)):
         if questions[j] in dict.keys(output):
             label = utils.classifyLabel(output[questions[j]],collection[j]['answers'])
-            print(label)
+            output[questions[j]] = label['labels'][0]
 # TESTING-----------------------
-    if i<1:
+    if iterator>2:
         fullproducts[name] = output
     else:
         missingproducts[name] = output
@@ -133,6 +137,11 @@ def laptopFormatting(laptops):
 		formattedLaptops.append(formatted)
 	return formattedLaptops
 
-# postNewProducts(products, laptopCollection, laptopFormatting)
+postNewProducts(fullproducts, laptopCollection, laptopFormatting)
+postNewProducts(missingproducts, incLaptopsCollection, laptopFormatting)
+
+
 driver.quit()
 
+print(missingproducts)
+print(fullproducts)
