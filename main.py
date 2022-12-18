@@ -8,7 +8,10 @@ import nlp_utilities as utils
 from pymongo import MongoClient
 from decouple import config
 
+import bing as bing
 
+# ---------------------------------------INIT BEGIN---------------------------------------
+# SCRAPER
 item = "laptop"
 URL = f"https://www.amazon.ca/s?k={item}"
 options = Options()
@@ -19,7 +22,7 @@ driver = webdriver.Chrome(options=options, executable_path=DRIVER_PATH)
 driver.get(URL)
 html = driver.page_source
 
-
+# MONGO
 MONGO_USER = config('USER')
 MONGO_PASS = config('PASS')
 CONNECTION_STRING = f'mongodb+srv://{MONGO_USER}:{MONGO_PASS}@cluster0.fgvaysh.mongodb.net/?retryWrites=true&w=majority'
@@ -29,17 +32,22 @@ quiz = db['quiz']
 laptopCollection = db['laptops']
 incLaptopsCollection = db['inc-laptops']
 
+# Change this value depending on how much is to be scraped.
+iterations = 4
+
+fullproducts = {}
+missingproducts = {}
+
+#MODELS 
 qa_model = pipeline("question-answering")
+
+#---------------------------------------INIT END---------------------------------------
 
 # QUIZ QUESTIONS
 questions = []
 collection = quiz.find()[0]['questions']
 for item in collection:
     questions.append(item['question'])
-
-
-
-# questions = ["Series", "Screen Size", "RAM", "Hard Drive", "Operating System", "Battery Life"]
 
 # AMAZON SEARCH PAGE
 links = []
@@ -49,10 +57,8 @@ for a in soup.find_all('a', {"class": "a-link-normal s-no-outline"}):
 
 
 
-fullproducts = {}
-missingproducts = {}
 # AMAZON
-for iterator in range(2):
+for iterator in range(iterations):
     pageURL = f"https://www.amazon.ca{links[iterator]}"
     driver.get(pageURL)
     html = driver.page_source
@@ -62,14 +68,16 @@ for iterator in range(2):
     out = [line for line in lines if line.strip() != ""]
 
     out = out[out.index("Technical Details") : out.index("Additional Information")]
+    out = out[2:]
     sentences = []
 
     for i in range(1,len(out)+1, 2):
         out[i] = out[i].replace("‎", "")
         out[i] = out[i].lstrip()
+        
 
         sentences.append(f"{out[i-1]}is {out[i]}.")
-
+    print(out)
     context = "".join(sentences) 
 
     output = {}
@@ -77,17 +85,21 @@ for iterator in range(2):
     output["Link"] = pageURL
     missing = []
     for item in questions:
-        question = item
-        if (qa_model(question = question, context = context)['score']>0.5):
-            output[item] = qa_model(question = question, context = context)['answer']
+        
+        temp = qa_model(question = item, context = context)
+        if (temp['score']>0.5): 
+            output[out[out.index(f"{temp['answer']} ") -1].strip()] = temp['answer']
         else:
             missing.append(item)
 
     print(output)
-    print("Missing items:" , missing)
+    print(missing)
 
     for item in missing:
-        temp = utils.automateAnswer(output["Name"], item)
+        temp = bing.getData(f"{output['Name']} {item}")
+        print(item)
+        print(temp)
+        # temp = utils.automateAnswer(output["Name"], item)
 
         if temp['General Answer'] != "":
             output[item] = temp['General Answer']
@@ -100,7 +112,7 @@ for iterator in range(2):
             if question == 0:
                 # There is no good "people also ask"
                 print(iterator)
-                if iterator >2:
+                if iterator >iterations:
                     print("\n\n\n\n\n")
                     item = item.replace("?", "")
                     answer = input(f" {(item)} for the {output['Name']}: ")
@@ -114,9 +126,13 @@ for iterator in range(2):
     for j in range(len(questions)):
         if questions[j] in dict.keys(output):
             label = utils.classifyLabel(output[questions[j]],collection[j]['answers'])
+            print(label)
             output[questions[j]] = label['labels'][0]
+            
+
+
 # TESTING-----------------------
-    if iterator>2:
+    if iterator>iterations:
         fullproducts[name] = output
     else:
         missingproducts[name] = output
@@ -137,8 +153,8 @@ def laptopFormatting(laptops):
 		formattedLaptops.append(formatted)
 	return formattedLaptops
 
-postNewProducts(fullproducts, laptopCollection, laptopFormatting)
-postNewProducts(missingproducts, incLaptopsCollection, laptopFormatting)
+# postNewProducts(fullproducts, laptopCollection, laptopFormatting)
+# postNewProducts(missingproducts, incLaptopsCollection, laptopFormatting)
 
 
 driver.quit()

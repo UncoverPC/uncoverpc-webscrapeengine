@@ -74,6 +74,6 @@ def getData(searchTerm):
         traceback.print_exc()
 
 
-output = getData(
-    "ASUS TUF Gaming A17 Gaming Laptop battery life")
-print(output)
+# output = getData(
+#     "ASUS TUF Gaming A17 Gaming Laptop battery life")
+# print(output)
