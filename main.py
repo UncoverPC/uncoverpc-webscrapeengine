@@ -11,7 +11,7 @@ from decouple import config
 import bing as bing
 
 # ---------------------------------------INIT BEGIN---------------------------------------
-# SCRAPER
+# AMAZON SCRAPER
 item = "laptop"
 URL = f"https://www.amazon.ca/s?k={item}"
 options = Options()
@@ -37,6 +37,7 @@ iterations = 4
 
 fullproducts = {}
 missingproducts = {}
+productInfo = {}
 
 #MODELS 
 qa_model = pipeline("question-answering")
@@ -46,16 +47,14 @@ qa_model = pipeline("question-answering")
 # QUIZ QUESTIONS
 questions = []
 collection = quiz.find()[0]['questions']
-for item in collection:
-    questions.append(item['question'])
+for quiz_question in collection:
+    questions.append(quiz_question['question'])
 
 # AMAZON SEARCH PAGE
 links = []
 soup = BeautifulSoup(html,"html.parser")
-for a in soup.find_all('a', {"class": "a-link-normal s-no-outline"}):
-    links.append(a["href"])
-
-
+for a_tag in soup.find_all('a', {"class": "a-link-normal s-no-outline"}):
+    links.append(a_tag["href"])
 
 # AMAZON
 for iterator in range(iterations):
@@ -71,71 +70,68 @@ for iterator in range(iterations):
     out = out[2:]
     sentences = []
 
+    # Cleanup text
     for i in range(1,len(out)+1, 2):
         out[i] = out[i].replace("‎", "")
         out[i] = out[i].lstrip()
-        
-
-        sentences.append(f"{out[i-1]}is {out[i]}.")
-    print(out)
+        sentences.append(f"{out[i-1]} is {out[i]}.")
     context = "".join(sentences) 
 
-    output = {}
-    output["Name"] = soup.find("span", {"id": "productTitle"}).get_text().split(',')[0].lstrip()
-    output["Link"] = pageURL
+    productInfo["Name"] = soup.find("span", {"id": "productTitle"}).get_text().split(',')[0].lstrip()
+    productInfo["Link"] = pageURL
     missing = []
     for item in questions:
         
         temp = qa_model(question = item, context = context)
-        if (temp['score']>0.5): 
-            output[out[out.index(f"{temp['answer']} ") -1].strip()] = temp['answer']
+        if (temp['score']>0.5): #May require fine-tuning
+            productInfo[out[out.index(f"{temp['answer']} ") -1].strip()] = temp['answer']
         else:
             missing.append(item)
 
-    print(output)
-    print(missing)
+    # print(productInfo)
+    # print(missing)
 
     for item in missing:
-        temp = bing.getData(f"{output['Name']} {item}")
+        temp = bing.getData(f"{productInfo['Name']} {item}")
         print(item)
         print(temp)
-        # temp = utils.automateAnswer(output["Name"], item)
+        # temp = utils.automateAnswer(productInfo["Name"], item)
 
         if temp['General Answer'] != "":
-            output[item] = temp['General Answer']
+            productInfo[item] = temp['General Answer']
         elif temp['Highlighted Answer'] != "":
-            output[item] = temp['Highlighted Answer']
+            productInfo[item] = temp['Highlighted Answer']
 
         else:
             # This is if there are no highlighted or regular answers
-            question = utils.extraSentences(output["Name"], item, temp['People also ask'])
+            question = utils.extraSentences(productInfo["Name"], item, temp['People also ask'])
             if question == 0:
                 # There is no good "people also ask"
                 print(iterator)
                 if iterator >iterations:
                     print("\n\n\n\n\n")
                     item = item.replace("?", "")
-                    answer = input(f" {(item)} for the {output['Name']}: ")
-                    output[item] = answer
+                    answer = input(f" {(item)} for the {productInfo['Name']}: ")
+                    productInfo[item] = answer
 
             else:
                 pass
 
-    name = output.pop('Name',None)
+    name = productInfo.pop('Name',None)
 
     for j in range(len(questions)):
-        if questions[j] in dict.keys(output):
-            label = utils.classifyLabel(output[questions[j]],collection[j]['answers'])
+        if questions[j] in dict.keys(productInfo):
+            label = utils.classifyLabel(productInfo[questions[j]],collection[j]['answers'])
             print(label)
-            output[questions[j]] = label['labels'][0]
+            productInfo[questions[j]] = label['labels'][0]
             
 
 
 # TESTING-----------------------
     if iterator>iterations:
-        fullproducts[name] = output
+        fullproducts[name] = productInfo
     else:
-        missingproducts[name] = output
+        missingproducts[name] = productInfo
     
 def postNewProducts(products, collection, formatting):
 	productIds = []

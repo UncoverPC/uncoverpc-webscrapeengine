@@ -26,11 +26,6 @@ def automateAnswer (item, request):
 
     out = google.main(item, request)
     return out
-    #     question = google.search_term
-    #     context=google.output[google.A]
-    #     answer = qa_model(question = question, context = context)
-    #     return answer
-
 
 def extraSentences(item,goal, package):
     manual_input = {}
