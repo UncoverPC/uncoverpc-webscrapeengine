@@ -22,7 +22,7 @@ def classifyLabel(sequence, labels):
         return {}
 
 def automateAnswer (item, request):
-    qa_model = pipeline("question-answering")
+    # qa_model = pipeline("question-answering")
 
     out = google.main(item, request)
     return out
