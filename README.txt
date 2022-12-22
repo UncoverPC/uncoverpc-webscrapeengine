@@ -12,3 +12,4 @@ run venv\Scripts\activate.bat in local directory
 - matplotlib
 - gensim
 - scikit-learn
+- flask
