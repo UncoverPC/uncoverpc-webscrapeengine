@@ -3,6 +3,8 @@ from bs4 import BeautifulSoup
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
 from transformers import pipeline
+import os, sys
+from bson.binary import Binary
 
 import nlp_utilities as utils
 from pymongo import MongoClient
@@ -10,6 +12,8 @@ from decouple import config
 import uuid
 
 import bing as bing
+sys.path.append(os.path.join(os.path.dirname(__file__), "Google"))
+import article as article
 
 # ---------------------------------------INIT BEGIN---------------------------------------
 # AMAZON SCRAPER
@@ -28,28 +32,27 @@ MONGO_USER = config('USER')
 MONGO_PASS = config('PASS')
 CONNECTION_STRING = f'mongodb+srv://{MONGO_USER}:{MONGO_PASS}@cluster0.fgvaysh.mongodb.net/?retryWrites=true&w=majority'
 client = MongoClient(CONNECTION_STRING)
-db = client['uncoverpc']
-quiz = db['quiz']
-laptopCollection = db['laptops']
-incLaptopsCollection = db['inc-laptops']
+db = client['Products']
+# quiz = db['quiz']
+amazonCollection = db['Amazon']
+articlesCollection = db['Articles']
 
 # Change this value depending on how much is to be scraped.
-iterations = 1
+iterations = int(input("Enter number of products to scrape: "))
 
-fullproducts = {}
-missingproducts = {}
 productInfo = {}
+articleInfo = {}
 
 #MODELS 
-qa_model = pipeline("question-answering")
+# qa_model = pipeline("question-answering")
 
 #---------------------------------------INIT END---------------------------------------
 
 # QUIZ QUESTIONS
-questions = []
-collection = quiz.find()[0]['questions']
-for quiz_question in collection:
-    questions.append(quiz_question['question'])
+# questions = []
+# collection = quiz.find()[0]['questions']
+# for quiz_question in collection:
+#     questions.append(quiz_question['question'])
 
 # AMAZON SEARCH PAGE
 links = []
@@ -71,15 +74,13 @@ for iterator in range(iterations):
 
     # Cleanup text
     for i in range(1,len(out)+1, 2):
-        out[i] = out[i].replace("‎", "")
-        out[i] = out[i].strip()
-        out[i-1] = out[i-1].strip()
-        sentences.append(f"{out[i-1]}: {out[i]}.")
-    # context = "\n".join(sentences) 
-
-    productInfo["Name"] = soup.find("span", {"id": "productTitle"}).get_text().split(',')[0].lstrip()
-    productInfo["Link"] = pageURL
-    productInfo["Price"] = soup.find("span", {"class": "a-offscreen"}).text
+        try:
+            out[i] = out[i].replace("‎", "")
+            out[i] = out[i].strip()
+            out[i-1] = out[i-1].strip()
+            sentences.append(f"{out[i-1]}: {out[i]}.")
+        except:
+            print("Error replacing character")
 
     for i in soup.find_all('script', type='text/javascript'):
         if "\'dp60MainImage\': \'https:" in i.text:
@@ -91,21 +92,32 @@ for iterator in range(iterations):
             break
 
     # Generate UUID
-    ID = uuid.uuid4()
-    productInfo["ID"] = ID
-    productInfo["Properties"] = sentences
+    ID = Binary.from_uuid(uuid.uuid4())
+    
 
     details = [] 
     for detail in soup.find("div", {"id": "featurebullets_feature_div"}).find_all("span", {"class": "a-list-item"}):
-        
         details.append(detail.text.strip().replace(u'\xa0', u'').replace(u'· ', u''))
 
- 
-    print(details)
-    print(productInfo)
+    productInfo["_id"] = ID
+    productInfo["Name"] = soup.find("span", {"id": "productTitle"}).get_text().split(',')[0].lstrip()
+    productInfo["Link"] = pageURL
+    productInfo["Price"] = soup.find("span", {"class": "a-offscreen"}).text
+    productInfo["Properties"] = sentences
 
-    
-    
+
+    articleInfo["_id"] = ID
+    articleInfo["Articles"] = article.getArticles(productInfo["Name"])
+    articleInfo["Extras"] = details
+    # print(productInfo)
+    # print(articleInfo)
+
+
+    amazonCollection.insert_one(productInfo)
+    articlesCollection.insert_one(articleInfo)
+
+    print(f"Inserted a total of {iterator+1} items into database")
+
     # missing = []
     # for item in questions:
     #     temp = qa_model(question = item, context = context)

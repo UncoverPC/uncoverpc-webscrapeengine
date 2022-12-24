@@ -50,7 +50,8 @@ def getArticleContent(article):
                         'Accept-Language': 'en-US, en;q=0.5'})
 
             webpage = requests.get(URL, headers=HEADERS)
-            dom = html.fromstring(webpage.content)
+            # dom = html.fromstring(webpage.content)
+            dom = webpage.text
             return dom
     except:
         #TO DO send an email
