@@ -19,7 +19,6 @@ import article as article
 sys.path.append(os.path.join(os.path.dirname(__file__), "Scraping"))
 import quizClassification as qClassify
 
-
 # ---------------------------------------INIT BEGIN---------------------------------------
 
 # Change this value depending on how much is to be scraped.
@@ -47,8 +46,6 @@ quizDB = client['uncoverpc']
 bestBuyCollection = prodDB['BestBuy']
 articlesCollection = prodDB['Articles']
 quizCollection = quizDB['quiz']
-
-# qa_model = pipeline("question-answering")
 
 productInfo = {}
 articleInfo = {}
