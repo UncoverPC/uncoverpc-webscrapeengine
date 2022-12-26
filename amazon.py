@@ -15,7 +15,14 @@ import bing as bing
 sys.path.append(os.path.join(os.path.dirname(__file__), "Google"))
 import article as article
 
+
+
+
 # ---------------------------------------INIT BEGIN---------------------------------------
+
+# Change this value depending on how much is to be scraped.
+iterations = int(input("Enter number of products to scrape: "))
+
 # AMAZON SCRAPER
 item = "laptop"
 URL = f"https://www.amazon.ca/s?k={item}"
@@ -37,8 +44,6 @@ db = client['Products']
 amazonCollection = db['Amazon']
 articlesCollection = db['Articles']
 
-# Change this value depending on how much is to be scraped.
-iterations = int(input("Enter number of products to scrape: "))
 
 productInfo = {}
 articleInfo = {}
@@ -49,10 +54,6 @@ articleInfo = {}
 #---------------------------------------INIT END---------------------------------------
 
 # QUIZ QUESTIONS
-# questions = []
-# collection = quiz.find()[0]['questions']
-# for quiz_question in collection:
-#     questions.append(quiz_question['question'])
 
 # AMAZON SEARCH PAGE
 links = []
@@ -129,8 +130,8 @@ for iterator in range(iterations):
     # print(productInfo)
     # print(missing)
 
-    # for item in missing:
-    #     temp = bing.getData(f"{productInfo['Name']} {item}")
+    # for item in missing:productInfo['Name']} {item}
+    #     temp = bing.getData(f"{")
     #     print(item)
     #     print(temp)
     #     # temp = utils.automateAnswer(productInfo["Name"], item)

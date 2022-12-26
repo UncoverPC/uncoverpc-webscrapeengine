@@ -8,16 +8,15 @@ import scraper as scraper
 sys.path.append(os.path.join(os.path.dirname(__file__), "Google"))
 import google as google
 
-
+classifier = pipeline("zero-shot-classification",
+                        model="facebook/bart-large-mnli")
 
 def classifyLabel(sequence, labels):
     try:
-        classifier = pipeline("zero-shot-classification",
-                        model="facebook/bart-large-mnli")
         return classifier(sequence, labels)
     except TypeError as e:
         #Send an email
-        print("An unexpected error has occured clasifying labels \n Sequence:" + sequence + "\nLabels: " + labels)
+        print("An unexpected error has occured clasifying labels \n Sequence:" + str(sequence) + "\nLabels: " + str(labels))
         traceback.print_exc()
         return {}
 

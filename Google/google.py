@@ -9,7 +9,7 @@ HA = "Highlighted Answer"
 A = "General Answer"
 def main(item, goal):
     
-    search_term = f"what is the {goal} of the {item}?"
+    search_term = f"{item} {goal}?"
 
     # Getting People also ask
     def findPAK(dom):
