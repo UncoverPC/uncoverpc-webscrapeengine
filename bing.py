@@ -23,6 +23,10 @@ def findKeyAnswer(dom):
 def findDefiniteAnswer(dom):
     return dom.xpath('//*[@id="d_ans"]/div/div[1]/div/div[1]')
 
+
+def findDefiniteAnswerWithMutipleSources(dom):
+    return dom.xpath('//*[@id="b_results"]/li /div[1]/div[1]/div/div/div[contains(@class, "focus")]')
+
 # Getting People also ask
 
 
@@ -68,6 +72,10 @@ def getData(searchTerm):
             definiteAnswer = findDefiniteAnswer(dom)
             if type(definiteAnswer) == list and len(definiteAnswer) > 0:
                 info[DA] = definiteAnswer[0].text_content()
+        else:
+            definiteAnswer = findDefiniteAnswerWithMutipleSources(dom)
+            if type(definiteAnswer) == list and len(definiteAnswer) > 0:
+                info[DA] = definiteAnswer[0].text_content()
         return info
     except TypeError as e:
         print("An unexpected error has occured while getting data")
@@ -75,5 +83,5 @@ def getData(searchTerm):
 
 
 # output = getData(
-#     "ASUS TUF Gaming A17 Gaming Laptop battery life")
+#     "how many hours is the asus chromebook c403 battery life")
 # print(output)

@@ -1,0 +1,1 @@
+ASUS TUF Gaming A17 Gaming Laptop battery life
