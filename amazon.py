@@ -43,7 +43,7 @@ CONNECTION_STRING = f'mongodb+srv://{MONGO_USER}:{MONGO_PASS}@cluster0.fgvaysh.m
 client = MongoClient(CONNECTION_STRING)
 db = client['Products']
 quizDB = client['uncoverpc']
-amazonCollection = db['Amazon']
+productsCollection = db['Products']
 articlesCollection = db['Articles']
 quizCollection = quizDB['quiz']
 
@@ -78,16 +78,21 @@ for iterator in tqdm(range(iterations)):
         out = out[out.index("Technical Details") : out.index("Additional Information")]
         out = out[2:]
         sentences = []
+        properties = {}
 
 
-        # Get name first, so that less information needs to be processed if it's a repeated product
+        # Generate UUID
+        ID = Binary.from_uuid(uuid.uuid4())
+        productInfo["_id"] = ID
+        productInfo["Source"] = "Amazon"
+
+        # Get name, so that less information needs to be processed if it's a repeated product
         productInfo["Name"] = soup.find("span", {"id": "productTitle"}).get_text().split(',')[0].lstrip()
 
          # Check if item is already in db
-        if amazonCollection.find_one({'Name': f'{productInfo["Name"]}'}) != None:
+        if productsCollection.find_one({'Name': f'{productInfo["Name"]}'}) != None:
             print("This product is already in DB")
             continue
-
 
         # Cleanup text
         for i in range(1,len(out)+1, 2):
@@ -96,6 +101,7 @@ for iterator in tqdm(range(iterations)):
                 out[i] = out[i].strip()
                 out[i-1] = out[i-1].strip()
                 sentences.append(f"{out[i-1]}: {out[i]}.")
+                properties[out[i-1]] = out[i]
             except:
                 print("Error replacing character")
 
@@ -108,14 +114,11 @@ for iterator in tqdm(range(iterations)):
                 productInfo["Img"] = lst
                 break
 
-        # Generate UUID
-        ID = Binary.from_uuid(uuid.uuid4())
-        
+    
         details = [] 
         for detail in soup.find("div", {"id": "featurebullets_feature_div"}).find_all("span", {"class": "a-list-item"}):
             details.append(detail.text.strip().replace(u'\xa0', u'').replace(u'· ', u''))
 
-        productInfo["_id"] = ID
         productInfo["Link"] = pageURL
         productInfo["Price"] = soup.find("span", {"class": "a-offscreen"}).text
         productInfo["Properties"] = sentences
@@ -124,43 +127,14 @@ for iterator in tqdm(range(iterations)):
         articleInfo["_id"] = ID
         articleInfo["Articles"] = article.getArticles(productInfo["Name"])
         articleInfo["Extras"] = details
-        # print(productInfo)
-        # print(articleInfo)
-        classifiedItem = qClassify.processProduct(productInfo, questions, quiz_questions)
 
-        print(classifiedItem)
-        # amazonCollection.insert_one(productInfo)
-        # articlesCollection.insert_one(articleInfo)
+        classifiedItem = qClassify.processProduct(productInfo, questions, quiz_questions)
+        classifiedItem["Properties"] = properties
+        productsCollection.insert_one(classifiedItem)
+        articlesCollection.insert_one(articleInfo)
     except Exception as e:
         print("Could not scrape or process product")
         print(traceback.format_exc())
 
 
 driver.quit()
-
-
-# TESTING-----------------------
-#     if iterator>iterations:
-#         fullproducts[name] = productInfo
-#     else:
-#         missingproducts[name] = productInfo
-    
-# def postNewProducts(products, collection, formatting):
-# 	productIds = []
-# 	for product in formatting(products):
-# 		productIds.append(collection.insert_one(product).inserted_id)
-# 	return productIds
-
-# def laptopFormatting(laptops):
-# 	formattedLaptops = []
-# 	for laptop in laptops:
-# 		formatted = {
-# 			"name": laptop,
-# 			"specs": laptops[laptop]
-# 		}
-# 		formattedLaptops.append(formatted)
-# 	return formattedLaptops
-
-# postNewProducts(fullproducts, laptopCollection, laptopFormatting)
-# postNewProducts(missingproducts, incLaptopsCollection, laptopFormatting)
-

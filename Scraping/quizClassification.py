@@ -19,8 +19,11 @@ def processProduct(productInfo, questions, quiz_questions):
     for item in incProp:
         temp = bing.getData(f"{item.replace('?',' ')} {classifiedItem['Name']}")
 
+        print(temp)
+
         if temp['Definite Answer'] != "":
             doneProp[item] = temp['Definite Answer']
+        
         elif temp['Highlighted Answer'] != "":
             doneProp[item] = temp['Highlighted Answer']
         elif temp['General Answer'] != "":

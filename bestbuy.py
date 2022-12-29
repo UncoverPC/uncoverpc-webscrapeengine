@@ -8,6 +8,7 @@ import uuid
 from bson.binary import Binary
 from tqdm import tqdm
 import traceback
+import json
 
 import nlp_utilities as utils
 from pymongo import MongoClient
@@ -43,7 +44,7 @@ CONNECTION_STRING = f'mongodb+srv://{MONGO_USER}:{MONGO_PASS}@cluster0.fgvaysh.m
 client = MongoClient(CONNECTION_STRING)
 prodDB = client['Products']
 quizDB = client['uncoverpc'] 
-bestBuyCollection = prodDB['BestBuy']
+productsCollection = prodDB['Products']
 articlesCollection = prodDB['Articles']
 quizCollection = quizDB['quiz']
 
@@ -72,7 +73,6 @@ for a_tag in soup.find('div', {"class": "productListingContainer_3JUbO"}).find_a
 # BESTBUY
 for iterator in tqdm(range(iterations)):
     try:
-        
         pageURL = f"https://www.bestbuy.ca{links[iterator]}"
         driver.get(pageURL)
         html = driver.page_source
@@ -82,28 +82,29 @@ for iterator in tqdm(range(iterations)):
         details = out[out.index("What's Included") +1:out.index("Specifications")-1]
         overview = out[out.index("Overview") +1]
         out = out[out.index("Specifications") +1 : out.index("From the Manufacturer")]
+
+        ID = Binary.from_uuid(uuid.uuid4())
+        productInfo["_id"] = ID  
+        productInfo["Source"] = "Best Buy"
+        productInfo["Name"] = soup.find("h1", {"class": "productName_2KoPa"}).get_text().split(" - ")[0]
+        
+        # Check if item is already in db
+        # if productsCollection.find_one({'Name': f'{productInfo["Name"]}'}) != None:
+        #     print("This product is already in DB")
+        #     continue
+
         sentences = []
+        properties = {}
         for i in soup.find_all("h3", {"class": "groupName_3O9-v"}):
             if i.get_text() in out:
                 out.remove(i.get_text())
 
         for i in range(1,len(out) +1, 2):
             sentences.append(f"{out[i-1]}: {out[i]}.")
-        
-
-        ID = Binary.from_uuid(uuid.uuid4())
-
-        productInfo["_id"] = ID  
-        productInfo["Name"] = soup.find("h1", {"class": "productName_2KoPa"}).get_text().split(" - ")[0]
-        
-        # Check if item is already in db
-        if bestBuyCollection.find_one({'Name': f'{productInfo["Name"]}'}) != None:
-            print("This product is already in DB")
-            continue
+            properties[out[i-1]] = out[i]
+       
         productInfo["Link"] = pageURL
-        productInfo["Price"] = soup.find_all("span", {"class": "screenReaderOnly_2mubv large_3uSI_"})[0].get_text() if soup.find_all("span", {"class": "screenReaderOnly_2mubv large_3uSI_"}) else ""
-        productInfo["Img"] = soup.find("img", {"class":"productImage_1NbKv"})["src"]
-        
+        productInfo["Price"] = json.loads(soup.find("script", {"id":"product-json-ld"}).get_text())["offers"]["price"]
         productInfo["Properties"] = sentences
         
         articleInfo["_id"] = ID
@@ -112,9 +113,11 @@ for iterator in tqdm(range(iterations)):
         articleInfo["Description"] = overview
 
         classifiedItem = qClassify.processProduct(productInfo, questions, quiz_questions)
-        
-        bestBuyCollection.insert_one(classifiedItem)
-        # articlesCollection.insert_one(articleInfo)
+        classifiedItem["Properties"] = properties
+
+        # print(classifiedItem)
+        productsCollection.insert_one(classifiedItem)
+        articlesCollection.insert_one(articleInfo)
 
 
     except Exception as e:
